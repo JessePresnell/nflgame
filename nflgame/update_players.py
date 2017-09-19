@@ -47,7 +47,7 @@ import os
 import re
 import sys
 import traceback
-
+import lxml.html
 import httplib2
 
 from bs4 import BeautifulSoup
@@ -130,7 +130,7 @@ def roster_soup(team):
     resp, content = new_http().request(urls['roster'] % team, 'GET')
     if resp['status'] != '200':
         return None
-    return BeautifulSoup(content, PARSER)
+    return BeautifulSoup(content, 'html.parser')
 
 
 def try_int(s):
@@ -176,7 +176,7 @@ def meta_from_soup_row(team, soup_row):
     if ',' not in name:
         last_name, first_name = name, ''
     else:
-        last_name, first_name = map(lambda s: s.strip(), name.split(','))
+        last_name, first_name = map(lambda s: s.strip(), name.split(','))[:2]
 
     return {
         'team': team,
@@ -355,7 +355,7 @@ def run():
         players = {}
 
         # Grab players one game a time to avoid obscene memory requirements.
-        for _, schedule in nflgame.sched.games.itervalues():
+        for _, schedule in nflgame.sched.games.iteritems():
             # If the game is too far in the future, skip it...
             if nflgame.live._game_datetime(schedule) > nflgame.live._now():
                 continue
@@ -405,23 +405,25 @@ def run():
 
     def fetch(team):
         return team, roster_soup(team)
+
     for i, (team, soup) in enumerate(pool.imap(fetch, teams), 1):
         progress(i, len(teams))
+        eprint(team)
 
         if soup is None:
             errors.append('Could not get roster for team %s' % team)
             continue
+        else:
+            tbodys = soup.find(id='result').find_all('tbody')
 
-        tbodys = soup.find(id='result').find_all('tbody')
-
-        for row in tbodys[len(tbodys)-1].find_all('tr'):
-            try:
-                roster.append(meta_from_soup_row(team, row))
-            except Exception:
-                errors.append(
-                    'Could not get player info from roster row:\n\n%s\n\n'
-                    'Exception:\n\n%s\n\n'
-                    % (row, traceback.format_exc()))
+            for row in tbodys[len(tbodys)-1].find_all('tr'):
+                try:
+                    roster.append(meta_from_soup_row(team, row))
+                except Exception:
+                    errors.append(
+                        'Could not get player info from roster row:\n\n%s\n\n'
+                        'Exception:\n\n%s\n\n'
+                        % (row, traceback.format_exc()))
     progress_done()
 
     # Find the gsis identifiers for players that are in the roster but haven't
