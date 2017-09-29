@@ -1,0 +1,62 @@
+# -*- coding: utf-8 -*-
+import requests
+import urllib2
+import json
+from bs4 import BeautifulSoup
+
+def get_combine(id):
+	res = urllib2.urlopen('http://www.nfl.com/players/profile?id='+id)
+	final_url = res.geturl()
+	combine= final_url.replace('/profile','/combine')
+	r=requests.get(combine)
+	soup = BeautifulSoup(r.text, 'html.parser')
+	pinfo = soup.find(id='combine-stats').find_all(class_='tp-title')
+	combine_stats=dict()
+	for x in pinfo:
+		stat=x.find(class_='tp-results').get_text().split(" ")[0]
+		stat_type= x.get_text().replace(stat,"").strip()
+		combine_stats[stat_type]=stat
+	year=soup.find(class_='combine-header').get_text().replace("Combine ","")
+	combine_stats['year']=year
+	return combine_stats
+
+
+# url='http://free.sportsinsights.com/free-odds/sportsinsights-odds.aspx'
+# r=requests.get(url)
+# print r.text
+# soup = BeautifulSoup(open("G:/code/sbo.html").read(), 'html.parser')
+# odds=soup.find_all(class_='row-odd')
+# # for row in odds:
+
+# row=odds[0]
+# date_comp=row.find(id='period1').get_text().strip().split("/")
+# month=date_comp[0]
+# day=date_comp[1]
+# year='2017'
+# away_team=row.find(id='tmv').get_text().strip().replace('-','')
+# home_team=row.find(id='tmh').get_text().strip().replace('-','')
+# spread=row.find_all(id='pctCell')
+# list2=[]
+# for x in spread:
+	
+# 	for b in x.find_all(class_='center'):
+# 		collector=b.find_all('span')
+# 		lister=[]
+# 		for c in collector:
+# 			item=c.get_text().replace("%","").strip()
+# 			lister.append(item)
+# 		list2.append(lister)
+# away_spread_p=str(list2[0][0])
+# home_spread_p=str(list2[0][1])
+# moneyline_away_p=list2[1][0]
+# moneyline_home_p=list2[1][1]
+# away_overunder_p=list2[2][0]
+# home_overunder_p=list2[2][1]
+# test= row.find(id='s3-1').get_text().strip().encode('utf-8').replace("\n",",").split(",")
+
+# print test
+
+x=open("G:/code/sbo.html").read()
+code=x.split("var rawData =  ")[1]
+print json.loads('{"odds": '+code.split(";")[0]+"}")
+
